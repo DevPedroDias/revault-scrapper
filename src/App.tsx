@@ -53,6 +53,7 @@ function App() {
 
   const fetchLogs = async () => {
     const logsFromDb = await window.electronAPI.listLogs();
+    console.log(logsFromDb)
     setLogs(logsFromDb as LogEntry[]);
   };
 
@@ -89,6 +90,7 @@ function App() {
           })
           .filter(() => {
             if (newStatus.type === StatusScrap.finished || newStatus.type === StatusScrap.error) {
+              window.electronAPI.removeStatusListener();
               return false;
             }
             return true;
@@ -97,7 +99,6 @@ function App() {
 
       if (newStatus.type === StatusScrap.finished || newStatus.type === StatusScrap.finishedDataCompilation || newStatus.type === StatusScrap.error) {
         fetchLogs();
-        window.electronAPI.removeStatusListener();
       }
 
       if (newStatus.type === StatusScrap.inProgess) {

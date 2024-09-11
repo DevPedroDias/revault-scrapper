@@ -39,8 +39,8 @@ export default class LoggerRepository {
             const logs = await db.all<SearchLoggerDTO[]>(`
                 SELECT id, status, input, search_quantity, message, filename, created_at, updated_at
                 FROM search_log
-                WHERE status = 'FINISHED' OR status = 'FINISHED_DATA_COMPILATION'
-                ORDER BY created_at DESC
+                WHERE status = 'FINISHED' OR status = 'FINISHED_DATA_COMPILATION' OR status = 'ERROR'
+                ORDER BY created_at DESC LIMIT 10
             `);
             await db.close();
 

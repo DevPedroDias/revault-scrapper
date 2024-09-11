@@ -32,6 +32,7 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
                 name?:string,
             }[] = []
             let totalSneakersFound = 0;
+            let duplicatedSneakers = 0;
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             let missingResults = input.maxResults;
 
@@ -75,19 +76,21 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
                             missingResults--; // Decrementa a quantidade de resultados faltantes
                             this.updateStatus({ type: StatusScrap.inProgess, message: `Sneaker added: ${totalSneakersFound}/${input.maxResults}`, logId });
                         } else {
-                            this.updateStatus({ type: StatusScrap.inProgess, message: `Duplicate sneaker skipped: ${index + 1}`, logId });
+                            duplicatedSneakers++
+                            this.updateStatus({ type: StatusScrap.inProgess, message: `Duplicate sneaker skipped: ${duplicatedSneakers}`, logId });
                         }
                     }
                 }
                 return sneakersFound
             }, SitemapRef)
+            const finalMessageLog = `Total results collected: ${sneakers.length}/${input.maxResults}`
             await browser._browserHandler.close()
             this.updateStatus({ type: StatusScrap.savingFile, logId })
             const fileHandler = new CSVFileHandler()
             const csvData = fileHandler.rawToCSV(sneakers)
             const filename = fileHandler.writeCSVFile('sneakersFound', csvData)
             this.updateStatus({ type: StatusScrap.finished, logId })
-            this.makeRegisterLog({status: { type: StatusScrap.finished, logId }, registerData: {input, filename}})
+            this.makeRegisterLog({status: { type: StatusScrap.finished, logId, message: finalMessageLog }, registerData: {input, filename}})
         } catch (error) {
             const castedError = error as Error
             this.updateStatus({ type: StatusScrap.error, message: castedError.message })
@@ -115,7 +118,7 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
         const singleSneakerOutput = await browser.executeOnPage<SinglePageDataOutput | null>('singlePage', async (_, page): Promise<SinglePageDataOutput | null> => {
             await page.goTo(url)
             await page.sleep(2000)
-            await page.click(SitemapRef.datailsSeeMoreButton)
+            // await page.click(SitemapRef.datailsSeeMoreButton)
             await page.sleep(500)
             const detailsBoxElement = await page.getElementByRef(SitemapRef.datailsSinglePageBox)
             const detailsCells = await detailsBoxElement?.$$(SitemapRef.datailsSinglePage)
