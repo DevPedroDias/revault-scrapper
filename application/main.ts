@@ -23,12 +23,17 @@ let win: BrowserWindow | null;
 
 function createWindow() {
   try {
+    const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV_SERVER_URL
     console.log("Creating browser window...");
+
+    const iconPath = isDev 
+    ? path.join(__dirname, '../src/assets/favicon.svg') // Modo de desenvolvimento
+    : path.join(process.env.VITE_PUBLIC, 'favicon.svg');
 
     win = new BrowserWindow({
       width: 1280,
       height: 720,
-      icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+      icon: iconPath,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),  // Verifique se este caminho está correto após o build
         nodeIntegration: true,

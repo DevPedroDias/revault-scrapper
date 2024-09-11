@@ -1,8 +1,10 @@
 import { ChangeEvent, FormEvent, useState, useEffect } from 'react';
 import { TextField, Button, Box, Typography, Card, CardContent, Chip } from '@mui/material';
+import logo from './assets/logo.svg';
 
 // Enum com os status
 enum StatusScrap {
+  starting = 'STARTING',
   started = 'STARTED',
   inProgess = 'IN_PROGRESS',
   searchFinished = 'SEARCH_FINISHED',
@@ -14,7 +16,7 @@ enum StatusScrap {
 }
 
 interface ProcessStatus {
-  id: number;
+  id?: number;
   type: StatusScrap;
   message?: string;
 }
@@ -34,10 +36,14 @@ function App() {
   const [maxResults, setMaxResults] = useState<number>(48);
   const [processes, setProcesses] = useState<ProcessStatus[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Controle para bloquear o botão
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [nameError, setNameError] = useState<boolean>(false); // Estado para controlar o erro do campo de nome
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
+    if (event.target.value !== '') {
+      setNameError(false); // Remove o erro ao corrigir o campo
+    }
   };
 
   const handleMaxResultsChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -45,78 +51,82 @@ function App() {
     setMaxResults(isNaN(value) ? 10 : value);
   };
 
-  // Função para buscar logs do banco de dados
   const fetchLogs = async () => {
     const logsFromDb = await window.electronAPI.listLogs();
-    setLogs((logsFromDb as LogEntry[]));
+    setLogs(logsFromDb as LogEntry[]);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const newProcessId = processes.length + 1;
-    setIsSubmitting(true); // Bloqueia o botão de envio
 
-    // Criar um novo processo com ID único
-    setProcesses([...processes, { id: newProcessId, type: StatusScrap.started }]);
+    if (name === '') {
+      setNameError(true); // Define o estado de erro se o nome estiver vazio
+      return;
+    }
 
-    // Iniciar o scrapDroper com o ID associado
+    setIsSubmitting(true);
+
+    const newProcess: ProcessStatus = { id: undefined, type: StatusScrap.starting };
+    setProcesses([...processes, newProcess]);
+
     await window.electronAPI.scrapDroper({
       keyword: name,
       maxResults,
-      logId: newProcessId, // Passando o ID do processo para o backend
     });
   };
 
-  // Atualizar os status dos processos em andamento
   useEffect(() => {
-    window.electronAPI.onStatusUpdate((status: { type: string, message?: string, logId?: number }) => {
-      console.log(status);
-
-      // Atualiza o processo específico pelo ID e remove o processo se o status for 'finishedDataCompilation'
-      setProcesses((prevProcesses) =>
-        prevProcesses
-          .map((process) =>
-            process.id === status.logId
-              ? { ...process, type: status.type as StatusScrap, message: status.message }
-              : process
-          )
-          // Remove o processo da lista quando o status for 'finishedDataCompilation'
-          .filter((process) => {
-            if (process.type === StatusScrap.finishedDataCompilation) {
-              fetchLogs(); // Chama o fetchLogs quando o processo é removido
-              return false; // Remove o processo
+    const handleStatusUpdate = (newStatus: { type: string; message?: string; logId?: number }) => {
+      setProcesses((currentProcesses) =>
+        currentProcesses
+          .map((process) => {
+            if (process.id === newStatus.logId) {
+              return { ...process, type: newStatus.type as StatusScrap, message: newStatus.message };
+            } else if (!process.id && newStatus.type === StatusScrap.inProgess) {
+              return { ...process, id: newStatus.logId, type: newStatus.type as StatusScrap, message: newStatus.message };
+            }
+            return process;
+          })
+          .filter(() => {
+            if (newStatus.type === StatusScrap.finished || newStatus.type === StatusScrap.error) {
+              return false;
             }
             return true;
           })
       );
 
-      // Desbloqueia o botão quando o status chegar em 'IN_PROGRESS'
-      if (status.type === StatusScrap.inProgess) {
-        setIsSubmitting(false); // Desbloqueia o botão
+      if (newStatus.type === StatusScrap.finished || newStatus.type === StatusScrap.finishedDataCompilation || newStatus.type === StatusScrap.error) {
+        fetchLogs();
+        window.electronAPI.removeStatusListener();
       }
-    });
+
+      if (newStatus.type === StatusScrap.inProgess) {
+        setIsSubmitting(false);
+      }
+    };
+
+    window.electronAPI.onStatusUpdate(handleStatusUpdate);
 
     return () => {
+      window.electronAPI.removeStatusListener();
     };
-  }, []);
+  }, [processes]);
 
-  // Buscar logs ao iniciar
   useEffect(() => {
     fetchLogs();
   }, []);
 
-  // Função auxiliar para aplicar cores aos status
   const getStatusColor = (status: StatusScrap) => {
     switch (status) {
       case StatusScrap.finished:
       case StatusScrap.finishedDataCompilation:
-        return 'success';
+        return '#A4DE02'; // Cor verde suave
       case StatusScrap.inProgess:
-        return 'primary';
+        return '#2AA3E0'; // Azul suave
       case StatusScrap.error:
-        return 'error';
+        return '#FF6F61'; // Vermelho pastel
       default:
-        return 'default';
+        return '#CCCCCC'; // Cinza suave
     }
   };
 
@@ -125,12 +135,12 @@ function App() {
       sx={{
         display: 'flex',
         flexDirection: 'row',
-        height: '100vh', // A altura total deve ocupar a janela inteira
-        backgroundColor: '#f4f6f8', // Cor de fundo suave
-        justifyContent: 'space-between', // Grudar nas extremidades
-        alignItems: 'center', // Centraliza o conteúdo verticalmente
+        height: '100vh',
+        backgroundColor: '#1C1C1C',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         gap: 2,
-        overflow: 'hidden', // Impede que a tela principal role
+        overflow: 'hidden',
         p: 0,
         m: 0,
         width: '100vw',
@@ -140,31 +150,27 @@ function App() {
       <Box
         sx={{
           flex: 1,
-          height: '100%', // Ocupa toda a altura disponível
-          overflowY: 'auto', // Ativa o scroll vertical
-          backgroundColor: '#ffffff',
+          height: '100%',
+          overflowY: 'auto',
+          backgroundColor: '#2E2E2E',
           borderRadius: 2,
-          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', // Sombra leve para card moderno
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
           p: 2,
-          maxHeight: '100vh', // Limita a altura ao tamanho da tela
+          maxHeight: '100vh',
         }}
       >
-        <Typography variant="h6" gutterBottom>
-          Processos em andamento
+        <Typography variant="h6" gutterBottom sx={{ color: '#fff', textAlign: 'center' }}>
+          On going searchs
         </Typography>
         {processes.map((process) => (
-          <Card key={process.id} sx={{ mb: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+          <Card key={process.id} sx={{ mb: 2, backgroundColor: '#3E3E3E', borderRadius: 1 }}>
             <CardContent>
-              <Typography variant="body1" fontWeight="bold">
-                Processo #{process.id}
+              <Typography variant="body1" fontWeight="bold" sx={{ color: '#fff' }}>
+                Search #{process.id}
               </Typography>
-              <Chip
-                label={process.type}
-                color={getStatusColor(process.type)}
-                sx={{ mb: 1 }}
-              />
+              <Chip label={process.type} sx={{ mb: 1, backgroundColor: getStatusColor(process.type), color: '#fff' }} />
               {process.message && (
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="textSecondary" sx={{ color: '#aaa' }}>
                   {process.message}
                 </Typography>
               )}
@@ -178,31 +184,50 @@ function App() {
         component="form"
         onSubmit={handleSubmit}
         sx={{
-          width: '400px', // Tamanho padrão do formulário
+          width: '400px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           gap: 2,
           p: 4,
-          backgroundColor: '#ffffff',
+          backgroundColor: '#2E2E2E',
           borderRadius: 2,
-          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', // Sombra leve para card moderno
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
         }}
       >
-        <Typography variant="h6" gutterBottom>
-          Formulário de Busca
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            mb: 2,
+          }}
+        >
+          <img src={logo} alt="Logo" style={{ width: '100px', height: 'auto' }} />
+        </Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#fff', textAlign: 'center' }}>
+          Search Panel
         </Typography>
         <TextField
-          label="Nome"
+          label="Name"
           value={name}
           onChange={handleNameChange}
           fullWidth
           required
           variant="outlined"
-          sx={{ backgroundColor: '#fafafa', borderRadius: 1 }} // Cor de fundo suave
+          error={nameError} // Define o erro no campo
+          helperText={nameError ? 'Name is required' : ''} // Mensagem de erro
+          sx={{
+            backgroundColor: '#fafafa',
+            borderRadius: 1,
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: nameError ? '#FF6F61' : 'inherit', // Cor da borda quando houver erro
+              },
+            },
+          }}
         />
         <TextField
-          label="Máximo de Resultados"
+          label="Max Results"
           type="number"
           value={maxResults}
           onChange={handleMaxResultsChange}
@@ -210,14 +235,16 @@ function App() {
           required
           InputProps={{ inputProps: { min: 1 } }}
           variant="outlined"
-          sx={{ backgroundColor: '#fafafa', borderRadius: 1 }} // Cor de fundo suave
+          sx={{ backgroundColor: '#fafafa', borderRadius: 1 }}
+          InputLabelProps={{
+            style: { color: '#000', fontWeight: 'bold' },
+          }}
         />
         <Button
           type="submit"
           variant="contained"
-          color="primary"
-          sx={{ py: 1.5 }}
-          disabled={isSubmitting} // Bloqueia o botão se estiver enviando
+          sx={{ py: 1, backgroundColor: '#FFDD57', color: '#000', '&:hover': { backgroundColor: '#FFCC00' } }}
+          disabled={isSubmitting}
         >
           Buscar
         </Button>
@@ -227,41 +254,37 @@ function App() {
       <Box
         sx={{
           flex: 1,
-          height: '100%', // Ocupa toda a altura disponível
-          overflowY: 'auto', // Ativa o scroll vertical
-          backgroundColor: '#ffffff',
+          height: '100%',
+          overflowY: 'auto',
+          backgroundColor: '#2E2E2E',
           borderRadius: 2,
-          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', // Sombra leve para card moderno
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
           p: 2,
-          maxHeight: '100vh', // Limita a altura ao tamanho da tela
+          maxHeight: '100vh',
         }}
       >
-        <Typography variant="h6" gutterBottom>
-          Logs de Buscas
+        <Typography variant="h6" gutterBottom sx={{ color: '#fff', textAlign: 'center' }}>
+          History
         </Typography>
         {logs.map((log) => (
-          <Card key={log.id} sx={{ mb: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+          <Card key={log.id} sx={{ mb: 2, backgroundColor: '#3E3E3E', borderRadius: 1 }}>
             <CardContent>
-              <Typography variant="body1" fontWeight="bold">
-                Log #{log.id}
+              <Typography variant="body1" fontWeight="bold" sx={{ color: '#fff' }}>
+              Search #{log.id}
               </Typography>
-              <Chip
-                label={log.status}
-                color={getStatusColor(log.status as StatusScrap)}
-                sx={{ mb: 1 }}
-              />
+              <Chip label={log.status} sx={{ mb: 1, backgroundColor: getStatusColor(log.status as StatusScrap), color: '#fff' }} />
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="textSecondary" sx={{ color: '#aaa' }}>
                   <strong>Input:</strong> {log.input}
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  <strong>Quantidade:</strong> {log.search_quantity}
+                <Typography variant="body2" color="textSecondary" sx={{ color: '#aaa' }}>
+                  <strong>Quantity:</strong> {log.search_quantity}
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  <strong>Arquivo:</strong> {log.filename}
+                <Typography variant="body2" color="textSecondary" sx={{ color: '#aaa' }}>
+                  <b>Filename:</b> {log.filename}
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  <strong>Criado em:</strong> {log.created_at}
+                <Typography variant="body2" color="textSecondary" sx={{ color: '#aaa' }}>
+                  <strong>Created at:</strong> {log.created_at}
                 </Typography>
               </Box>
             </CardContent>

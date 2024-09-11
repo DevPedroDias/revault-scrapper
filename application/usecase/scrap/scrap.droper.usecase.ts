@@ -32,6 +32,7 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
                 name?:string,
             }[] = []
             let totalSneakersFound = 0;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             let missingResults = input.maxResults;
 
             const sneakers = await browser.executeOnPage<SinglePageDataOutput[]>('searchPage', async (browser, page): Promise<SinglePageDataOutput[]> => {
