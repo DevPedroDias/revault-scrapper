@@ -1,7 +1,7 @@
 {
   "name": "revault-scrapper",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.5",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
@@ -52,6 +52,8 @@
     "json-2-csv": "^5.5.5",
     "npm": "^10.8.3",
     "puppeteer": "^23.2.1",
+    "puppeteer-chromium-resolver": "^23.0.0",
+    "puppeteer-core": "^23.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "sha256": "^0.2.0",
@@ -82,6 +84,13 @@
     {
       "from": "node_modules/sqlite3/lib/binding/",
       "to": "node_modules/sqlite3/lib/binding/",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "node_modules/puppeteer/.local-chromium/",
+      "to": "chromium",
       "filter": [
         "**/*"
       ]

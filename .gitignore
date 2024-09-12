@@ -26,3 +26,4 @@ release/*
 dist-full-app
 distRealese
 build-configs
+.cache
