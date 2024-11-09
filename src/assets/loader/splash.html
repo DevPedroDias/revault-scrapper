@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loading...</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: black;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+      #logo {
+        margin-bottom: 20px;
+      }
+      #loading-text {
+        font-size: 20px;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <img id="logo" src="./../logo.svg" alt="Logo" width="150" />
+      <div id="loading-text">Loading something awesome...</div>
+    </div>
+
+    <script>
+      const phrases = [
+        "Loading the internet...",
+        "Scraping some pixels...",
+        "Extracting data... carefully!",
+        "Organizing the chaos...",
+        "Taming the web...",
+        "Looking for unicorns...",
+        "Gathering the crumbs of data...",
+        "Fighting off the CAPTCHAs...",
+        "Smoothing out the rough edges...",
+        "Finding the needle in the haystack...",
+      ];
+
+      let phraseIndex = 0;
+
+      setInterval(() => {
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        document.getElementById("loading-text").textContent =
+          phrases[phraseIndex];
+      }, 3000); // Change phrase every 3 seconds
+    </script>
+  </body>
+</html>

@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', preloads)
 contextBridge.exposeInMainWorld('electronAPI', {
     scrapDroper: (args: unknown) => ipcRenderer.invoke('scrap-droper', args),
     listLogs: () => ipcRenderer.invoke('list-logs'),
+    checkInternet: () => ipcRenderer.invoke('check-internet'),
+    scanFileStructure: () => ipcRenderer.invoke('scan-file-structure'),
+    syncFiles: () => ipcRenderer.invoke('sync-files'),
       // Expor os eventos de status
     onStatusUpdate: (callback: (status: ScrapStatusProcess) => void) => {
       ipcRenderer.on('scrap-status-update', (_, status) => callback(status));

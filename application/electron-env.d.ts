@@ -27,6 +27,9 @@ interface Window {
   electronAPI: {
     scrapDroper: (args: Record<string, unknown>) => Promise<unknown>;
     listLogs: () => Promise<unknown[]>;
+    checkInternet: () => Promise<boolean>;
+    scanFileStructure: () => Promise<boolean>;
+    syncFiles: () => Promise<boolean>;
     onStatusUpdate: (callback: (status: {type: string, message?: string, logId?: number}) => void) => void;
     removeStatusListener: () => void;
   };

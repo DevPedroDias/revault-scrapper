@@ -8,6 +8,9 @@ import PostProcessScrapUseCaseFactory from './usecase/post-process-scrap/post.pr
 import { MakeRegisterLogInput } from './usecase/usecase.by.event';
 import { StatusScrap } from './domain/value-objects/status.scrap';
 import ListLogsUseCaseFactory from './usecase/list-logs/list.logs.usecase.factory';
+import dns from 'dns';
+import ValidateFileStructureUsecase from './usecase/validate-file-strutcture/validate.file.structure.usecase';
+import SyncFilesUsecase from './usecase/sync-files/sync.files.usecase';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -19,76 +22,87 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST;
 
-let win: BrowserWindow | null;
+let mainWindow: BrowserWindow | null;
+let splashWindow: BrowserWindow | null;
 
-function createWindow() {
-  try {
-    const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV_SERVER_URL
-    console.log("Creating browser window...");
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: true,
+    },
+  });
 
-    const iconPath = isDev 
+  splashWindow.loadFile(path.join(__dirname, '../src/assets/loader/splash.html'));
+}
+
+function createMainWindow() {
+  const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV_SERVER_URL;
+
+  const iconPath = isDev
     ? path.join(__dirname, '../src/assets/favicon.svg') // Modo de desenvolvimento
     : path.join(process.env.VITE_PUBLIC, 'favicon.svg');
 
-    win = new BrowserWindow({
-      width: 1280,
-      height: 720,
-      icon: iconPath,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),  // Verifique se este caminho está correto após o build
-        nodeIntegration: true,
-        nodeIntegrationInWorker: true
-      },
-    });
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    icon: iconPath,
+    show: false, // Inicialmente oculto
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      nodeIntegrationInWorker: true,
+    },
+  });
 
-    win.webContents.on('did-finish-load', () => {
-      console.log('Window finished loading.');
-      win?.webContents.send('main-process-message', new Date().toLocaleString());
-    });
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Main window finished loading.');
+    mainWindow?.webContents.send('main-process-message', new Date().toLocaleString());
+  });
 
-    // Abre a janela quando ela estiver pronta e ativa o DevTools
-    win.once('ready-to-show', () => {
-      console.log('Window is ready to show.');
-      win?.show();
-      win?.webContents.openDevTools();  // Ativa DevTools para depuração
-    });
+  mainWindow.once('ready-to-show', () => {
+    console.log('Main window is ready to show.');
+    mainWindow?.setMenu(null);
+    mainWindow?.webContents.openDevTools();
+    mainWindow?.show(); // Mostrar a janela principal somente após o splash ser fechado
+    splashWindow?.close(); // Fecha a janela de splash
+  });
 
-    // Carrega a URL ou o arquivo local dependendo do ambiente
-    if (VITE_DEV_SERVER_URL) {
-      console.log('Loading VITE_DEV_SERVER_URL:', VITE_DEV_SERVER_URL);
-      win.loadURL(VITE_DEV_SERVER_URL);
-    } else {
-      const indexPath = path.join(RENDERER_DIST, 'index.html');
-      console.log('Loading local file:', indexPath);
-      win.loadFile(indexPath).catch((error) => {
-        console.error('Error loading index.html:', error);
-      });
-    }
-  } catch (error) {
-    console.error('Error creating window:', error);
+  // Carregar a URL ou o arquivo local dependendo do ambiente
+  if (VITE_DEV_SERVER_URL) {
+    console.log('Loading VITE_DEV_SERVER_URL:', VITE_DEV_SERVER_URL);
+    mainWindow.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    const indexPath = path.join(RENDERER_DIST, 'index.html');
+    console.log('Loading local file:', indexPath);
+    mainWindow.loadFile(indexPath).catch((error) => {
+      console.error('Error loading index.html:', error);
+    });
   }
 }
 
 app.whenReady().then(async () => {
   try {
-    console.log('Initializing database...');
+    createSplashWindow();
     await initializeDb();
-    console.log('Database initialized successfully.');
-
-    createWindow();  // Cria a janela ao inicializar o aplicativo
+    createMainWindow();
 
     app.on('window-all-closed', () => {
       console.log('All windows closed.');
       if (process.platform !== 'darwin') {
         app.quit();
-        win = null;
+        mainWindow = null;
       }
     });
 
     app.on('activate', () => {
       console.log('App activated.');
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
+        createMainWindow();
       }
     });
   } catch (error) {
@@ -109,6 +123,40 @@ ipcMain.handle('list-logs', async () => {
   }
 });
 
+ipcMain.handle('scan-file-structure', async () => {
+  try {
+    const usecase = new ValidateFileStructureUsecase();
+    await usecase.execute();
+    return true
+  } catch (error) {
+    console.error('Error handling scan-file-structure:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('sync-files', async () => {
+  try {
+    const usecase = new SyncFilesUsecase();
+    await usecase.execute();
+    return true
+  } catch (error) {
+    console.error('Error handling sync-files:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('check-internet', async () => {
+  return new Promise((resolve) => {
+    dns.lookup('google.com', (err) => {
+      if (err) {
+        resolve(false); // Sem conexão
+      } else {
+        resolve(true); // Conectado à internet
+      }
+    });
+  });
+});
+
 ipcMain.handle('scrap-droper', async (_, args) => {
   try {
     console.log('Starting scrap-droper...');
@@ -120,7 +168,7 @@ ipcMain.handle('scrap-droper', async (_, args) => {
         refKey: 'updateStatus',
         callback: async (status) => {
           console.log('Updating scrap status:', status);
-          win?.webContents.send('scrap-status-update', status);
+          mainWindow?.webContents.send('scrap-status-update', status);
         },
       },
       {

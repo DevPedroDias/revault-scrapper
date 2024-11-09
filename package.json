@@ -1,7 +1,7 @@
 {
   "name": "revault-scrapper",
   "private": true,
-  "version": "0.0.5",
+  "version": "0.0.6",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
@@ -46,6 +46,7 @@
   "dependencies": {
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.1.4",
     "@mui/material": "^6.0.1",
     "bufferutil": "^4.0.8",
     "install": "^0.13.0",
