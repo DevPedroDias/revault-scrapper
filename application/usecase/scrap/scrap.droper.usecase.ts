@@ -1,19 +1,19 @@
-import CSVFileHandler from "../../libs/file-handler/csv.file.handler";
 import MetaParams from "../../libs/puppeteer/components/object-values/meta.params";
 import PuppeteerBrowserComponent from "../../libs/puppeteer/components/puppeteer.browser.component";
 import PuppeteerPageComponent from "../../libs/puppeteer/components/puppeteer.page.component";
 import PuppeteerService from "../../libs/puppeteer/puppeteer.service";
 import UsecaseByEvent from "../usecase.by.event";
 import { SinglePageDataOutput, SitemapRef, SinglePageDetailsDataOutput, SinglePageDetailsElementsMapRef, DROPER_BASE_URL } from "./droper.element.sitemap";
-import { StatusScrap } from '../../domain/value-objects/status.scrap';
-import CreateScrapLogUseCase from "../save-scrap-logger/create.scrap.log.usecase";
 import SneakerRepository from "../../libs/sqlite/repository/sneaker.repository";
+import LoggerRepository from "../../libs/sqlite/repository/logger.repository";
+import Search, { SearchStatus } from "../../domain/entity/search";
+import Sneaker from "../../domain/entity/sneaker";
 
 export default class ScrapDroperUsecase extends UsecaseByEvent {
     private readonly productsByPageNumber = 48;
     constructor(
         private readonly puppeteerService: PuppeteerService,
-        private readonly saveScrapLoggerUsecase: CreateScrapLogUseCase,
+        private readonly loggerRepository: LoggerRepository,
         private readonly sneakerRepository: SneakerRepository,
     ) {
         super();
@@ -21,24 +21,26 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
 
     async execute (input: ScrapDroperUsecaseInput) {
         try {
-            const logId = await this.saveScrapLoggerUsecase.execute({
-                newStatus: { type: StatusScrap.started }, 
-                inputArgs: { input }
+            const searchEntity = new Search({
+                status: SearchStatus.started,
+                keyword: input.keyword,
+                quantity: input.maxResults
             })
-            this.updateStatus({ type: StatusScrap.started, logId })
+            searchEntity.id = await this.loggerRepository.create(searchEntity)
+
+            this.updateStatus(searchEntity)
             const browser = await this.puppeteerService.lauch()
-            const sneakerLoggerData: {
-                sku?:string,
-                name?:string,
-            }[] = []
             let totalSneakersFound = 0;
             let duplicatedSneakers = 0;
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             let missingResults = input.maxResults;
 
-            const sneakers = await browser.executeOnPage<SinglePageDataOutput[]>('searchPage', async (browser, page): Promise<SinglePageDataOutput[]> => {
-                this.updateStatus({ type: StatusScrap.inProgess, logId, message: 'Searching results...' })
-                const sneakersFound: SinglePageDataOutput[] = []
+            const sneakers = await browser.executeOnPage<Sneaker[]>('searchPage', async (browser, page): Promise<Sneaker[]> => {
+                searchEntity.status = SearchStatus.inProgess
+                searchEntity.message = 'Searching results...'
+                this.updateStatus(searchEntity)
+
+                const sneakersFound: Sneaker[] = []
                 await page.goTo(SitemapRef.initUrl)
                 await page.sleep(5000)
                 await page.click(SitemapRef.openFiltersSelector)
@@ -55,45 +57,43 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
                 const singleProductLinks = await this.scrapSinglePageLink(page)
                 for (let index = 0; index < singleProductLinks.length && totalSneakersFound < input.maxResults && index < this.productsByPageNumber; index++) {
                     const link = singleProductLinks[index];
-                    const sneaker = await this.scrapSinglePage(`${DROPER_BASE_URL}${link}`, browser);
-                    console.log(sneaker)
+                    const sneaker = await this.scrapSinglePage(`${DROPER_BASE_URL}${link}`, browser, Number(searchEntity.id));
                     if (sneaker) {
-                        const isDuplicate = await this.checkIfSneakerExists(sneaker.details.sku); // Checa se já está salvo
+                        const isDuplicate = await this.checkIfSneakerExists(sneaker.sku);
                         if (!isDuplicate) {
-                            const sneakerData = {
-                                sku: sneaker.details.sku as string,
-                                name: sneaker.name,
-                                log_id: logId
-                              }
                               page.sleep(1000)
-                              await this.sneakerRepository.createSneaker(sneakerData)
+                              await this.sneakerRepository.createSneaker(sneaker)
                             sneakersFound.push(sneaker);
-                            sneakerLoggerData.push({
-                                sku: sneaker.details.sku || undefined,
-                                name: sneaker.name,
-                            });
                             totalSneakersFound++;
-                            missingResults--; // Decrementa a quantidade de resultados faltantes
-                            this.updateStatus({ type: StatusScrap.inProgess, message: `Sneaker added: ${totalSneakersFound}/${input.maxResults}`, logId });
+                            missingResults--;
+
+                            searchEntity.status = SearchStatus.inProgess
+                            searchEntity.message = `Sneaker added: ${totalSneakersFound}/${input.maxResults}`
+                            this.updateStatus(searchEntity)
                         } else {
                             duplicatedSneakers++
-                            this.updateStatus({ type: StatusScrap.inProgess, message: `Duplicate sneaker skipped: ${duplicatedSneakers}`, logId });
+                            searchEntity.status = SearchStatus.inProgess
+                            searchEntity.message = `Duplicate sneaker skipped: ${duplicatedSneakers}`
+                            this.updateStatus(searchEntity)
                         }
                     }
                 }
                 return sneakersFound
             }, SitemapRef)
-            const finalMessageLog = `Total results collected: ${sneakers.length}/${input.maxResults}`
             await browser._browserHandler.close()
-            this.updateStatus({ type: StatusScrap.savingFile, logId })
-            const fileHandler = new CSVFileHandler()
-            const csvData = fileHandler.rawToCSV(sneakers)
-            const filename = fileHandler.writeCSVFile('sneakersFound', csvData)
-            this.updateStatus({ type: StatusScrap.finished, logId })
-            this.makeRegisterLog({status: { type: StatusScrap.finished, logId, message: finalMessageLog }, registerData: {input, filename}})
+            searchEntity.status = SearchStatus.finished
+            searchEntity.message = `Total results collected: ${sneakers.length}/${input.maxResults}`
+            this.updateStatus(searchEntity)
+            this.loggerRepository.update(searchEntity)
+
         } catch (error) {
             const castedError = error as Error
-            this.updateStatus({ type: StatusScrap.error, message: castedError.message })
+            this.updateStatus(new Search({
+                status: SearchStatus.error,
+                keyword: input.keyword,
+                quantity: input.maxResults,
+                message: castedError.message
+            }))
         }
     }
 
@@ -114,7 +114,7 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
         }, new MetaParams(SitemapRef))
     }
 
-    private async scrapSinglePage (url: string, browser: PuppeteerBrowserComponent): Promise<SinglePageDataOutput | null> {
+    private async scrapSinglePage (url: string, browser: PuppeteerBrowserComponent, searchId: number): Promise<Sneaker | null> {
         const singleSneakerOutput = await browser.executeOnPage<SinglePageDataOutput | null>('singlePage', async (_, page): Promise<SinglePageDataOutput | null> => {
             await page.goTo(url)
             await page.sleep(2000)
@@ -156,7 +156,20 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
             }
             return response
         })
-        return singleSneakerOutput
+        return new Sneaker({
+            sku: String(singleSneakerOutput?.details.sku),
+            price: String(singleSneakerOutput?.price),
+            description: String(singleSneakerOutput?.description),
+            imageLinks: String(singleSneakerOutput?.imageLinks),
+            releaseDate: String(singleSneakerOutput?.details.releaseDate),
+            brand: String(singleSneakerOutput?.details.brand),
+            silhouette: String(singleSneakerOutput?.details.silhouette),
+            releasePrice: String(singleSneakerOutput?.details.releasePrice),
+            color: String(singleSneakerOutput?.details.color),
+            name: String(singleSneakerOutput?.name),
+            synced: 0,
+            searchId,
+        })
     }
 
     private async scrapSinglePageImages (rawPhotos: string | unknown[]) {

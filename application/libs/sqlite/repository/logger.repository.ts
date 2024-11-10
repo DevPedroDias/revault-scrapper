@@ -1,10 +1,10 @@
+import Search from "../../../domain/entity/search";
 import { openDb } from "../database";
 
 export interface SearchLoggerDTO {
     id?: number;
     status?: string;
     input?: string;
-    filename?: string;
     search_quantity?: number;
     message?: string;
     created_at?: string;
@@ -12,16 +12,15 @@ export interface SearchLoggerDTO {
   }
 
 export default class LoggerRepository {
-    async create(searchLog: Omit<SearchLoggerDTO, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
+    async create(search: Search): Promise<number> {
         try {
             const db = await openDb();
             const result = await db.run(
-              `INSERT INTO search_log (status, input, search_quantity, message, filename) VALUES (?, ?, ?, ?, ?)`,
-              searchLog.status,
-              searchLog.input,
-              searchLog.search_quantity,
-              searchLog.message || null,
-              searchLog.filename
+              `INSERT INTO searchs (status, input, search_quantity, message) VALUES (?, ?, ?, ?)`,
+              search.status,
+              search.keyword,
+              search.quantity,
+              search.message || null,
             );
             const lastId = Number(result.lastID)
             await db.close();
@@ -37,8 +36,8 @@ export default class LoggerRepository {
         try {
             const db = await openDb();
             const logs = await db.all<SearchLoggerDTO[]>(`
-                SELECT id, status, input, search_quantity, message, filename, created_at, updated_at
-                FROM search_log
+                SELECT id, status, input, search_quantity, message, created_at, updated_at
+                FROM searchs
                 WHERE status = 'FINISHED' OR status = 'FINISHED_DATA_COMPILATION' OR status = 'ERROR'
                 ORDER BY created_at DESC LIMIT 10
             `);
@@ -50,27 +49,25 @@ export default class LoggerRepository {
             throw error;
         }
     }
-    async update(searchLog: Partial<Omit<SearchLoggerDTO, 'created_at' | 'updated_at'>>): Promise<void> {
+    async update(search: Search): Promise<void> {
         try {
           const db = await openDb();
           const updatedAt = new Date().toISOString(); // Atualizar a coluna updated_at
     
           await db.run(
-            `UPDATE search_log
+            `UPDATE searchs
              SET status = COALESCE(?, status),
                  input = COALESCE(?, input),
                  search_quantity = COALESCE(?, search_quantity),
                  message = COALESCE(?, message),
-                 filename = COALESCE(?, filename),
                  updated_at = ?
              WHERE id = ?`,
-            searchLog.status || null,
-            searchLog.input || null,
-            searchLog.search_quantity || null,
-            searchLog.message || null,
-            searchLog.filename || null,
+            search.status || null,
+            search.keyword || null,
+            search.quantity || null,
+            search.message || null,
             updatedAt,
-            searchLog.id
+            search.id
           );
     
           await db.close();

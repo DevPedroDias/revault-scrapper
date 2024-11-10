@@ -26,13 +26,12 @@ export async function initializeDb(): Promise<void> {
     
     // Cria a tabela search_log, se não existir
     await db.exec(`
-      CREATE TABLE IF NOT EXISTS search_log (
+      CREATE TABLE IF NOT EXISTS searchs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         status TEXT,
         input TEXT,
         search_quantity INTEGER,
         message TEXT,
-        filename TEXT,
         created_at TEXT DEFAULT (DATETIME('now')),
         updated_at TEXT DEFAULT (DATETIME('now'))
       )
@@ -41,16 +40,47 @@ export async function initializeDb(): Promise<void> {
     // Cria a tabela sneakers, se não existir
     await db.exec(`
       CREATE TABLE IF NOT EXISTS sneakers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sku TEXT,
-        name TEXT,
-        log_id INTEGER,
-        created_at TEXT DEFAULT (DATETIME('now')),
-        updated_at TEXT DEFAULT (DATETIME('now')),
-        FOREIGN KEY (log_id) REFERENCES search_log(id) ON DELETE CASCADE,
-        CONSTRAINT unique_sku UNIQUE (sku)
-      )
-    `);
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sku TEXT,
+      name TEXT,
+      price TEXT,
+      description TEXT,
+      imageLinks TEXT,
+      releaseDate TEXT,
+      brand TEXT,
+      silhouette TEXT,
+      releasePrice TEXT,
+      color TEXT,
+      search_id INTEGER,
+      synced INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (DATETIME('now')),
+      updated_at TEXT DEFAULT (DATETIME('now')),
+      FOREIGN KEY (search_id) REFERENCES searchs(id) ON DELETE CASCADE,
+      CONSTRAINT unique_sku UNIQUE (sku)
+    );
+  `);
+
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT,
+      api_key TEXT,
+      created_at TEXT DEFAULT (DATETIME('now')),
+      updated_at TEXT DEFAULT (DATETIME('now'))
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS syncs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    api_key TEXT,
+    created_at TEXT DEFAULT (DATETIME('now')),
+    updated_at TEXT DEFAULT (DATETIME('now'))
+  );
+  `);
 
     console.log('Banco de dados inicializado com sucesso.');
     await db.close();
@@ -58,3 +88,15 @@ export async function initializeDb(): Promise<void> {
     console.error('Erro durante a inicialização do banco de dados:', error);
   }
 }
+
+
+// name
+// price
+// description
+// imageLinks
+// sku
+// releaseDate
+// brand
+// silhouette
+// releasePrice
+// color

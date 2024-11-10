@@ -1,16 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { preloads } from './preloads/preloads'
-import { ScrapStatusProcess } from './domain/value-objects/scrap.status.process';
+import Search from './domain/entity/search';
 
 contextBridge.exposeInMainWorld('ipcRenderer', preloads)
 contextBridge.exposeInMainWorld('electronAPI', {
     scrapDroper: (args: unknown) => ipcRenderer.invoke('scrap-droper', args),
+    listSneakers: (args: unknown) => ipcRenderer.invoke('list-sneakers', args),
     listLogs: () => ipcRenderer.invoke('list-logs'),
     checkInternet: () => ipcRenderer.invoke('check-internet'),
-    scanFileStructure: () => ipcRenderer.invoke('scan-file-structure'),
-    syncFiles: () => ipcRenderer.invoke('sync-files'),
-      // Expor os eventos de status
-    onStatusUpdate: (callback: (status: ScrapStatusProcess) => void) => {
+    onStatusUpdate: (callback: (search: Search) => void) => {
       ipcRenderer.on('scrap-status-update', (_, status) => callback(status));
     },
 

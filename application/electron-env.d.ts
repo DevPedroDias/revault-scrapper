@@ -1,36 +1,26 @@
 /// <reference types="vite-plugin-electron/electron-env" />
 
-declare namespace NodeJS {
-  interface ProcessEnv {
-    /**
-     * The built directory structure
-     *
-     * ```tree
-     * ├─┬─┬ dist
-     * │ │ └── index.html
-     * │ │
-     * │ ├─┬ dist-electron
-     * │ │ ├── main.js
-     * │ │ └── preload.js
-     * │
-     * ```
-     */
-    APP_ROOT: string
-    /** /dist/ or /public/ */
-    VITE_PUBLIC: string
+import type { Search } from './models/Search'; // Importa a classe Search como tipo
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      APP_ROOT: string;
+      VITE_PUBLIC: string;
+    }
+  }
+
+  interface Window {
+    ipcRenderer: import('electron').IpcRenderer;
+    electronAPI: {
+      scrapDroper: (args: Record<string, unknown>) => Promise<unknown>;
+      listSneakers: (args: unknown) => Promise<unknown>;
+      listLogs: () => Promise<unknown[]>;
+      checkInternet: () => Promise<boolean>;
+      onStatusUpdate: (callback: (search: Search) => void) => void;
+      removeStatusListener: () => void;
+    };
   }
 }
 
-// Used in Renderer process, expose in `preload.ts`
-interface Window {
-  ipcRenderer: import('electron').IpcRenderer
-  electronAPI: {
-    scrapDroper: (args: Record<string, unknown>) => Promise<unknown>;
-    listLogs: () => Promise<unknown[]>;
-    checkInternet: () => Promise<boolean>;
-    scanFileStructure: () => Promise<boolean>;
-    syncFiles: () => Promise<boolean>;
-    onStatusUpdate: (callback: (status: {type: string, message?: string, logId?: number}) => void) => void;
-    removeStatusListener: () => void;
-  };
-}
+export {}; // Isso é necessário para que o arquivo seja tratado como um módulo

@@ -1,13 +1,13 @@
 import PuppeteerService from "../../libs/puppeteer/puppeteer.service";
+import LoggerRepository from "../../libs/sqlite/repository/logger.repository";
 import SneakerRepository from "../../libs/sqlite/repository/sneaker.repository";
-import CreateScrapLogUseCaseFactory from "../save-scrap-logger/create.scrap.log.usecase.factory";
 import ScrapDroperUsecase from "./scrap.droper.usecase";
 
 export default class ScrapDroperUsecaseFactory {
     static build(): ScrapDroperUsecase {
-        const saveScrapLoggerUsecase = CreateScrapLogUseCaseFactory.build()
+        const loggerRepository = new LoggerRepository()
         const puppeteerService = new PuppeteerService()
         const sneakerRepository = new SneakerRepository()
-        return new ScrapDroperUsecase(puppeteerService, saveScrapLoggerUsecase, sneakerRepository)
+        return new ScrapDroperUsecase(puppeteerService, loggerRepository, sneakerRepository)
     }
 }
