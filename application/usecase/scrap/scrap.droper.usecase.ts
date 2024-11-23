@@ -43,6 +43,7 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
                 const sneakersFound: Sneaker[] = []
                 await page.goTo(SitemapRef.initUrl)
                 await page.sleep(5000)
+                await page.type(SitemapRef.searchFieldSelector, input.keyword);
                 await page.click(SitemapRef.openFiltersSelector)
                 await page.waitForSelector(SitemapRef.openOrdernationTypeSelector)
                 await page.click(SitemapRef.openOrdernationTypeSelector);
@@ -51,7 +52,6 @@ export default class ScrapDroperUsecase extends UsecaseByEvent {
                 await page.waitForSelector(SitemapRef.categoryTypeSelector)
                 await page.click(SitemapRef.categoryTypeSelector);
                 await page.click(SitemapRef.closeFilterSelector);
-                await page.type(SitemapRef.searchFieldSelector, input.keyword);
                 await page.pressKey('Enter');
                 await page.waitForSelector(SitemapRef.productCellSelector);
                 const singleProductLinks = await this.scrapSinglePageLink(page)

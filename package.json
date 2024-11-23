@@ -1,7 +1,7 @@
 {
   "name": "revault-scrapper",
   "private": true,
-  "version": "0.0.6",
+  "version": "0.1.1",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
@@ -32,7 +32,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "src/assets/app-icon.ico",
+      "icon": "src/assets/favicon.ico",
       "certificateFile": "build-configs/signature/mycert.pfx",
       "sign": false,
       "publisherName": "Revault Inc."

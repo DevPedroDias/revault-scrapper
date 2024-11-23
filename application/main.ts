@@ -18,6 +18,11 @@ export let mainWindow: BrowserWindow | null;
 let splashWindow: BrowserWindow | null;
 
 function createSplashWindow() {
+  const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV_SERVER_URL;
+  const splashPath = isDev
+    ? path.join(__dirname, '../src/assets/loader/splash.html') // Desenvolvimento
+    : path.join(RENDERER_DIST, 'assets/loader/splash.html'); // Produção
+
   splashWindow = new BrowserWindow({
     width: 400,
     height: 300,
@@ -29,7 +34,10 @@ function createSplashWindow() {
     },
   });
 
-  splashWindow.loadFile(path.join(__dirname, '../src/assets/loader/splash.html'));
+  console.log('Loading splash file:', splashPath); // Log para depuração
+  splashWindow.loadFile(splashPath).catch((err) => {
+    console.error('Error loading splash.html:', err);
+  });
 }
 
 function createMainWindow() {
@@ -59,7 +67,7 @@ function createMainWindow() {
   mainWindow.once('ready-to-show', () => {
     console.log('Main window is ready to show.');
     mainWindow?.setMenu(null);
-    mainWindow?.webContents.openDevTools();
+    if (isDev) mainWindow?.webContents.openDevTools();
     mainWindow?.show(); // Mostrar a janela principal somente após o splash ser fechado
     splashWindow?.close(); // Fecha a janela de splash
   });

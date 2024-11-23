@@ -4,6 +4,7 @@ import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  base: './',
   plugins: [
     react(),
     electron({
@@ -12,7 +13,7 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['sqlite3', 'typeorm'], // Exclui o sqlite3 do bundle
+              external: ['sqlite3', 'typeorm'],
             },
           },
         },
@@ -23,4 +24,4 @@ export default defineConfig({
       renderer: process.env.NODE_ENV === 'test' ? undefined : {},
     }),
   ],
-})
+});

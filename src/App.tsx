@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Menu from './components/Menu';
 import SearchFormPage from './pages/SearchForm';
 import SearchHistoryPage from './pages/SearchHistory';
