@@ -1,4 +1,4 @@
-import LoggerRepository, { SearchLoggerDTO } from "../../libs/sqlite/repository/logger.repository"
+import LoggerRepository, { SearchLoggerDTO } from "../../libs/typeorm/repository/logger.repository"
 
 export default class ListLogsUseCase {
     constructor (

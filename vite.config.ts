@@ -12,7 +12,7 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['sqlite3'], // Exclui o sqlite3 do bundle
+              external: ['sqlite3', 'typeorm'], // Exclui o sqlite3 do bundle
             },
           },
         },

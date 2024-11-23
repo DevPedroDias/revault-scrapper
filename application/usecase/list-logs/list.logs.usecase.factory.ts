@@ -1,4 +1,4 @@
-import LoggerRepository from "../../libs/sqlite/repository/logger.repository";
+import LoggerRepository from "../../libs/typeorm/repository/logger.repository";
 import ListLogsUseCase from "./list.logs.usecase";
 
 export default class ListLogsUseCaseFactory {

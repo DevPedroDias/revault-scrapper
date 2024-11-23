@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { initializeDb } from './libs/sqlite/database';
 import SetIPCRoutes from './route/route'
+import AppDataSource from './libs/typeorm/database';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -80,7 +80,7 @@ function createMainWindow() {
 app.whenReady().then(async () => {
   try {
     createSplashWindow();
-    await initializeDb();
+    await AppDataSource.initialize();
     createMainWindow();
 
     app.on('window-all-closed', () => {

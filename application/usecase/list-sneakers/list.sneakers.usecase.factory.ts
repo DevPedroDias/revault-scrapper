@@ -1,4 +1,4 @@
-import SneakerRepository from "../../libs/sqlite/repository/sneaker.repository"
+import SneakerRepository from "../../libs/typeorm/repository/sneaker.repository"
 import ListSneakersUseCase from "./list.sneakers.usecase"
 
 export default class ListSneakersUseCaseFactory {

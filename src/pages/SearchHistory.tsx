@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -23,8 +23,8 @@ const statusColors: { [key: string]: string } = {
 type LogEntry = {
   id: number;
   status: string;
-  input: string;
-  search_quantity: number;
+  keyword: string;
+  quantity: number;
   message?: string;
   created_at?: string;
   updated_at?: string;
@@ -35,6 +35,7 @@ const SearchHistoryPage = () => {
 
   const fetchLogs = async () => {
     const logsFromDb = await window.electronAPI.listLogs();
+    console.log(logsFromDb)
     setLogs(logsFromDb as LogEntry[]);
   };
   useEffect(() => {
@@ -133,8 +134,8 @@ const SearchHistoryPage = () => {
                     >
                       {item.status}
                     </TableCell>
-                    <TableCell sx={{ color: '#FFF' }}>{item.input}</TableCell>
-                    <TableCell sx={{ color: '#FFF' }}>{item.search_quantity}</TableCell>
+                    <TableCell sx={{ color: '#FFF' }}>{item.keyword}</TableCell>
+                    <TableCell sx={{ color: '#FFF' }}>{item.quantity}</TableCell>
                     <TableCell sx={{ color: '#FFF' }}>{item.message}</TableCell>
                   </TableRow>
                 ))

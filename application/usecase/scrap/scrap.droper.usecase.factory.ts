@@ -1,6 +1,6 @@
 import PuppeteerService from "../../libs/puppeteer/puppeteer.service";
-import LoggerRepository from "../../libs/sqlite/repository/logger.repository";
-import SneakerRepository from "../../libs/sqlite/repository/sneaker.repository";
+import LoggerRepository from "../../libs/typeorm/repository/logger.repository";
+import SneakerRepository from "../../libs/typeorm/repository/sneaker.repository";
 import ScrapDroperUsecase from "./scrap.droper.usecase";
 
 export default class ScrapDroperUsecaseFactory {

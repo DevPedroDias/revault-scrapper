@@ -11,7 +11,10 @@ import {
   Paper,
   Button,
   Pagination,
+  Chip,
 } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import SneakerDetailsModal from '../components/SneakerDetailModal';
 
 interface Sneaker {
@@ -26,6 +29,7 @@ interface Sneaker {
   silhouette: string;
   releasePrice: string;
   color: string;
+  synced: number;
 }
 
 export interface SneakerPageData {
@@ -42,14 +46,13 @@ const SneakerListPage = () => {
   const [totalPages, setTotalPages] = useState<number>(0);
 
   const fetchSneakers = async (page: number) => {
-    const sneakersPageData = await window.electronAPI.listSneakers({page}) as SneakerPageData;
-    console.log(sneakersPageData)
+    const sneakersPageData = await window.electronAPI.listSneakers({ page }) as SneakerPageData;
     setSneakers(sneakersPageData.data as Sneaker[]);
-    setTotalPages(sneakersPageData.totalPages); // Atualiza o total de páginas com base no retorno
+    setTotalPages(sneakersPageData.totalPages);
   };
 
   useEffect(() => {
-    fetchSneakers(currentPage); // Busca dados ao carregar a página ou mudar de página
+    fetchSneakers(currentPage);
   }, [currentPage]);
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
@@ -98,7 +101,7 @@ const SneakerListPage = () => {
               <TableRow>
                 <TableCell sx={{ color: '#FFD700', fontWeight: 'bold', backgroundColor: '#1C1C1C' }}>SKU</TableCell>
                 <TableCell sx={{ color: '#FFD700', fontWeight: 'bold', backgroundColor: '#1C1C1C' }}>Name</TableCell>
-                <TableCell sx={{ color: '#FFD700', fontWeight: 'bold', backgroundColor: '#1C1C1C' }}>Price</TableCell>
+                <TableCell sx={{ color: '#FFD700', fontWeight: 'bold', backgroundColor: '#1C1C1C' }}>Is Sync</TableCell>
                 <TableCell sx={{ color: '#FFD700', fontWeight: 'bold', backgroundColor: '#1C1C1C' }}>Brand</TableCell>
                 <TableCell sx={{ color: '#FFD700', fontWeight: 'bold', backgroundColor: '#1C1C1C' }}>Actions</TableCell>
               </TableRow>
@@ -109,7 +112,29 @@ const SneakerListPage = () => {
                   <TableRow key={sneaker.id} hover>
                     <TableCell sx={{ color: '#FFF' }}>{sneaker.sku}</TableCell>
                     <TableCell sx={{ color: '#FFF' }}>{sneaker.name}</TableCell>
-                    <TableCell sx={{ color: '#FFF' }}>{sneaker.price}</TableCell>
+                    <TableCell sx={{ color: '#FFF' }}>
+                      {sneaker.synced ? (
+                        <Chip
+                          icon={<CheckCircleIcon sx={{ color: '#A4DE02' }} />}
+                          label="Synced"
+                          sx={{
+                            backgroundColor: '#A4DE02',
+                            color: '#000',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                      ) : (
+                        <Chip
+                          icon={<CancelIcon sx={{ color: '#FF6F61' }} />}
+                          label="Not Synced"
+                          sx={{
+                            backgroundColor: '#FF6F61',
+                            color: '#FFF',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                      )}
+                    </TableCell>
                     <TableCell sx={{ color: '#FFF' }}>{sneaker.brand}</TableCell>
                     <TableCell>
                       <Button
@@ -140,9 +165,9 @@ const SneakerListPage = () => {
         {/* Componente de Paginação */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
           <Pagination
-            count={totalPages} // Total de páginas
-            page={currentPage} // Página atual
-            onChange={handlePageChange} // Handler para mudança de página
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
             color="primary"
           />
         </Box>

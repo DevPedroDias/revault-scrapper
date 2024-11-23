@@ -61,6 +61,7 @@
     "sha256": "^0.2.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
+    "typeorm": "^0.3.20",
     "utf-8-validate": "^6.0.4",
     "vite-tsconfig-paths": "^5.0.1"
   },
@@ -93,6 +94,13 @@
     {
       "from": "node_modules/puppeteer/.local-chromium/",
       "to": "chromium",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "node_modules/typeorm",
+      "to": "node_modules/typeorm",
       "filter": [
         "**/*"
       ]

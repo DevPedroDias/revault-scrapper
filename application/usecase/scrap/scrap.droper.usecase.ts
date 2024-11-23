@@ -4,8 +4,8 @@ import PuppeteerPageComponent from "../../libs/puppeteer/components/puppeteer.pa
 import PuppeteerService from "../../libs/puppeteer/puppeteer.service";
 import UsecaseByEvent from "../usecase.by.event";
 import { SinglePageDataOutput, SitemapRef, SinglePageDetailsDataOutput, SinglePageDetailsElementsMapRef, DROPER_BASE_URL } from "./droper.element.sitemap";
-import SneakerRepository from "../../libs/sqlite/repository/sneaker.repository";
-import LoggerRepository from "../../libs/sqlite/repository/logger.repository";
+import SneakerRepository from "../../libs/typeorm/repository/sneaker.repository";
+import LoggerRepository from "../../libs/typeorm/repository/logger.repository";
 import Search, { SearchStatus } from "../../domain/entity/search";
 import Sneaker from "../../domain/entity/sneaker";
 
